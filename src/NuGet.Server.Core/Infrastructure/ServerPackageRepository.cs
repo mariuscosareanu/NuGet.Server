@@ -93,10 +93,9 @@ namespace NuGet.Server.Core.Infrastructure
             _persistenceTimer = new Timer(state =>
                 _serverPackageStore.PersistIfDirty(), null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
 
-            // Rebuild the package store in the background (every hour)
+            // Rebuild the package store in the background (every hour by default)
             _rebuildTimer = new Timer(state =>
-                RebuildPackageStore(), null, TimeSpan.FromSeconds(15), TimeSpan.FromHours(1));
-
+                RebuildPackageStore(), null, TimeSpan.FromSeconds(15), PackageStoreRebuildTimeSpan);
             _logger.Log(LogLevel.Info, "Finished registering background jobs.");
         }
 
@@ -721,6 +720,13 @@ namespace NuGet.Server.Core.Infrastructure
                 return _settingsProvider.GetBoolSetting("enableFileSystemMonitoring", true);
             }
         }
+        
+        /// <summary>
+        /// The time period to execute a background job which rebuilds the Package Store
+        /// </summary>
+        private int PackageStoreRebuildMinutesPeriod => _settingsProvider.GetIntSetting("packageStoreRebuildMinutesPeriod", 60);
+
+        private TimeSpan PackageStoreRebuildTimeSpan => TimeSpan.FromMinutes(PackageStoreRebuildMinutesPeriod);
 
         private string GetPackageFileName(string packageId, SemanticVersion version)
         {

@@ -14,7 +14,8 @@ namespace NuGet.Server.Core.Tests
 {
     public class ServerPackageRepositoryTest
     {
-        public static ServerPackageRepository CreateServerPackageRepository(string path, Action<ExpandedPackageRepository> setupRepository = null, Func<string, bool, bool> getSetting = null)
+        public static ServerPackageRepository CreateServerPackageRepository(string path, Action<ExpandedPackageRepository> setupRepository = null, 
+            Func<string, bool, bool> getSetting = null, Func<string, int, int> intSettings = null)
         {
             var fileSystem = new PhysicalFileSystem(path);
             var expandedPackageRepository = new ExpandedPackageRepository(fileSystem);
@@ -29,7 +30,7 @@ namespace NuGet.Server.Core.Tests
                 runBackgroundTasks: false,
                 innerRepository: expandedPackageRepository,
                 logger: new Infrastructure.NullLogger(),
-                settingsProvider: getSetting != null ? new FuncSettingsProvider(getSetting) : null);
+                settingsProvider: getSetting != null && intSettings != null ? new FuncSettingsProvider(getSetting, intSettings) : null);
 
             serverRepository.GetPackages(); // caches the files
 
@@ -162,10 +163,12 @@ namespace NuGet.Server.Core.Tests
                     return defaultValue;
                 };
 
+                Func<string, int, int> getIntSetting = (key, defaultValue) => defaultValue;
+
                 var serverRepository = CreateServerPackageRepository(temporaryDirectory.Path, repository =>
                 {
                     repository.AddPackage(CreatePackage("test1", "1.0"));
-                }, getSetting);
+                }, getSetting, getIntSetting);
 
                 // Assert base setup
                 var packages = serverRepository.Search("test1", true).ToList();

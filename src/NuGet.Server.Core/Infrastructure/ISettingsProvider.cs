@@ -5,5 +5,7 @@ namespace NuGet.Server.Core.Infrastructure
     public interface ISettingsProvider
     {
         bool GetBoolSetting(string key, bool defaultValue);
+
+        int GetIntSetting(string key, int defaultValue);
     }
 }
