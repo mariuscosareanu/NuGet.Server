@@ -105,6 +105,60 @@ namespace NuGet.Server.Core.Infrastructure
             return CachedPackages.AsQueryable();
         }
 
+        public IPackage AddNewPackage(IPackage package)
+        {
+            AddPackage(package);
+            var packageEntity = CreateServerPackage(package, EnableDelisting);
+
+            return packageEntity;
+        }
+
+        public void AddPackageMetadata(IPackage package)
+        {
+            MonitorFileSystem(false);
+            try
+            {
+                lock (_syncLock)
+                {
+                    _logger.Log(LogLevel.Info, "Start adding package {0} {1} to store.", package.Id, package.Version);
+                    // Add to metadata store
+                    _serverPackageStore.Store(CreateServerPackage(package, EnableDelisting));
+
+                    _logger.Log(LogLevel.Info, "Finished adding package {0} {1} to store.", package.Id, package.Version);
+                }
+            }
+            finally
+            {
+                MonitorFileSystem(true);
+            }
+        }
+
+        public void RemovePackageMetadata(string packageId, SemanticVersion version)
+        {
+            var package = FindPackage(packageId, version);
+
+            if (package != null)
+            {
+                MonitorFileSystem(false);
+                try
+                {
+                    lock (_syncLock)
+                    {
+                        _logger.Log(LogLevel.Info, "Start removing package {0} {1} from store.", package.Id, package.Version);
+
+                        // Update metadata store
+                        _serverPackageStore.Remove(package.Id, package.Version);
+
+                        _logger.Log(LogLevel.Info, "Finished removing package {0} {1} from store.", package.Id, package.Version);
+                    }
+                }
+                finally
+                {
+                    MonitorFileSystem(true);
+                }
+            }
+        }
+
         public bool Exists(string packageId, SemanticVersion version)
         {
             return FindPackage(packageId, version) != null;
