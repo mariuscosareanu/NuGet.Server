@@ -38,6 +38,9 @@ namespace NuGet.Server.Core.Infrastructure
         private Timer _persistenceTimer;
         private Timer _rebuildTimer;
 
+        public event EventHandler<PackageEventArgs> PackageAdded;
+        public event EventHandler<PackageEventArgs> PackageRemoved;
+
         public ServerPackageRepository(string path, IHashProvider hashProvider, ISettingsProvider settingsProvider = null, Logging.ILogger logger = null)
         {
             if (string.IsNullOrEmpty(path))
@@ -103,14 +106,6 @@ namespace NuGet.Server.Core.Infrastructure
         public override IQueryable<IPackage> GetPackages()
         {
             return CachedPackages.AsQueryable();
-        }
-
-        public IPackage AddNewPackage(IPackage package)
-        {
-            AddPackage(package);
-            var packageEntity = CreateServerPackage(package, EnableDelisting);
-
-            return packageEntity;
         }
 
         public void AddPackageMetadata(IPackage package)
@@ -324,10 +319,14 @@ namespace NuGet.Server.Core.Infrastructure
                     // Copy to correct filesystem location
                     _expandedPackageRepository.AddPackage(package);
 
+                    var packageMetadata = CreateServerPackage(package, EnableDelisting);
+
                     // Add to metadata store
-                    _serverPackageStore.Store(CreateServerPackage(package, EnableDelisting));
+                    _serverPackageStore.Store(packageMetadata);
 
                     _logger.Log(LogLevel.Info, "Finished adding package {0} {1}.", package.Id, package.Version);
+
+                    OnPackageAdded(packageMetadata);
                 }
             }
             finally
@@ -393,6 +392,8 @@ namespace NuGet.Server.Core.Infrastructure
                             _serverPackageStore.Remove(package.Id, package.Version);
 
                             _logger.Log(LogLevel.Info, "Finished removing package {0} {1}.", package.Id, package.Version);
+
+                            OnPackageRemoved(package);
                         }
                     }
                 }
@@ -608,14 +609,14 @@ namespace NuGet.Server.Core.Infrastructure
                 serverPackage = CreateServerPackage(package, enableDelisting);
                 return true;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 serverPackage = null;
                 _logger.Log(LogLevel.Warning, "Unable to create server package - {0} {1}: {2}", package.Id, package.Version, e.Message);
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Sets the current cache to null so it will be regenerated next time.
         /// </summary>
@@ -784,6 +785,16 @@ namespace NuGet.Server.Core.Infrastructure
         private string GetHashFileName(string packageId, SemanticVersion version)
         {
             return string.Format(TemplateHashFilename, packageId, version.ToNormalizedString(), NuGet.Constants.HashFileExtension);
+        }
+
+        protected virtual void OnPackageAdded(IPackage package)
+        {
+            PackageAdded?.Invoke(this, new PackageEventArgs { Package = package });
+        }
+
+        protected virtual void OnPackageRemoved(IPackage package)
+        {
+            PackageRemoved?.Invoke(this, new PackageEventArgs { Package = package });
         }
     }
 }

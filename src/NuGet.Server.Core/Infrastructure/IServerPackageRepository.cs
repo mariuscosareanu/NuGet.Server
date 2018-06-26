@@ -7,7 +7,6 @@ namespace NuGet.Server.Core.Infrastructure
     {
         void ClearCache();
         void RemovePackage(string packageId, SemanticVersion version);
-        IPackage AddNewPackage(IPackage package);
         void AddPackageMetadata(IPackage package);
         void RemovePackageMetadata(string packageId, SemanticVersion version);
     }
