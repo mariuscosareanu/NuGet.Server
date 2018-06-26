@@ -115,11 +115,14 @@ namespace NuGet.Server.Core.Infrastructure
             {
                 lock (_syncLock)
                 {
-                    _logger.Log(LogLevel.Info, "Start adding package {0} {1} to store.", package.Id, package.Version);
-                    // Add to metadata store
-                    _serverPackageStore.Store(CreateServerPackage(package, EnableDelisting));
+                    if (_serverPackageStore.HasPackages())
+                    {
+                        _logger.Log(LogLevel.Info, "Start adding package {0} {1} to store.", package.Id, package.Version);
+                        // Add to metadata store
+                        _serverPackageStore.Store(CreateServerPackage(package, EnableDelisting));
 
-                    _logger.Log(LogLevel.Info, "Finished adding package {0} {1} to store.", package.Id, package.Version);
+                        _logger.Log(LogLevel.Info, "Finished adding package {0} {1} to store.", package.Id, package.Version);
+                    }
                 }
             }
             finally
